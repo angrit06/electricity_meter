@@ -1,10 +1,10 @@
-from machine import Pin
+from machine import Pin, I2C
 import time
 import network
 import machine
 from umqtt.robust import MQTTClient
 import ubinascii
-import adafruit_mlx90393
+# import adafruit_mlx90393
 
 
 # def magnetic():
@@ -57,16 +57,56 @@ def connect_network():
 
 def mqtt_client():
     id = ubinascii.hexlify(machine.unique_id())
-    print(id.decode('utf8'))
     mqtt_client = MQTTClient(id.decode('utf8'), "raspberrypi")
     mqtt_client.connect()
     return mqtt_client
+
+def initialize_magnetic():
+    print("initialization of hmc5883l")
+    i2c = I2C(sda=Pin(4), scl=Pin(5))
+    addresses = i2c.scan() #get the address of the device
+    while len(addresses) < 1:
+        addresses = i2c.scan()
+        print("connection to I2C device failed... re-run!")
+        time.sleep(0.5)
+    print("address of I2C device: ",addresses)
+    i2c.writeto_mem(int(addresses[0]),0,b'\x70')
+    print("CRA configured!")
+    i2c.writeto_mem(int(addresses[0]), 1, b'\x20')
+    print("CRB configured!")
+    i2c.writeto_mem(int(addresses[0]), 2, b'\x00')
+    print("Mode register configured!")
+    print("configuration of hmc5883l finished!")
+    X = i2c.readfrom_mem(int(addresses[0]),3,2)
+    print("data in x: ", X)
+    Y = i2c.readfrom_mem(int(addresses[0]), 5, 2)
+    print("data in y: ", Y)
+    Z = i2c.readfrom_mem(int(addresses[0]), 7, 2)
+    print("data in z: ", Z)
+
+
+def magnetic():
+    # 4 -> D2 = sda -> black
+    # 5 -> D1 = scl ->orange
+    i2c = I2C(sda=Pin(4), scl=Pin(5))
+    print("in magnetic")
+    addresses = i2c.scan()
+    while len(addresses)<1:
+        addresses = i2c.scan()
+        print(addresses)
+        time.sleep(0.5)
+    print(addresses)
+    print(int(addresses[0]))
+    data=i2c.readfrom(int(addresses[0]),4)
+    print(data)
 
 if __name__ == '__main__':
     blink(periods=5, frequenz=1)
     connect_network()
     mqtt_client = mqtt_client()
     mqtt_client.publish(topic="/cellar/electricity_meter/X", msg="test")
-    # magnetic()
-    # mqtt_client.publish(topic="/cellar/electricity_meter/test", msg="test!")
+    time.sleep(0.3)
+    initialize_magnetic()
+    mqtt_client.publish(topic="/cellar/electricity_meter/Z", msg="test!")
+    print("mqtt messages published")
     blink(periods=10, frequenz=0.4)
