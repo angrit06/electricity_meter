@@ -77,12 +77,14 @@ def initialize_magnetic():
     i2c.writeto_mem(int(addresses[0]), 2, b'\x00')
     print("Mode register configured!")
     print("configuration of hmc5883l finished!")
-    X = i2c.readfrom_mem(int(addresses[0]),3,2)
-    print("data in x: ", X)
-    Y = i2c.readfrom_mem(int(addresses[0]), 5, 2)
-    print("data in y: ", Y)
-    Z = i2c.readfrom_mem(int(addresses[0]), 7, 2)
-    print("data in z: ", Z)
+    while True:
+        X = i2c.readfrom_mem(int(addresses[0]),3,2)
+        print("data in x: ", int.from_bytes(X,'big', True))
+        Y = i2c.readfrom_mem(int(addresses[0]), 5, 2)
+        print("data in y: ", int.from_bytes(Y, 'big', True))
+        Z = i2c.readfrom_mem(int(addresses[0]), 7, 2)
+        print("data in z: ", int.from_bytes(Z, 'big', True))
+        time.sleep(0.5)
 
 
 def magnetic():
